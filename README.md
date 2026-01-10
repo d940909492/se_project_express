@@ -4,7 +4,6 @@ The back-end project is focused on creating a server for the WTWR application.
 [And this is repo of front-end](https://github.com/d940909492/se_project_react)
 
 <br />
-<br />
 
 ## Running the Project
 `npm run start` — to launch the server 
