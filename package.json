@@ -1,0 +1,35 @@
+{
+  "name": "se_project_express",
+  "version": "0.1.0",
+  "description": "this is backend side for WTWR",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js",
+    "dev": "nodemon index.js",
+    "lint": "npx eslint ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/d940909492/se_project_express.git"
+  },
+  "author": "ZhuoDong Zhen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/d940909492/se_project_express/issues"
+  },
+  "homepage": "https://github.com/d940909492/se_project_express#readme",
+  "dependencies": {
+    "express": "^4.22.1",
+    "mongoose": "^8.21.0",
+    "validator": "^13.15.26"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^8.10.2",
+    "eslint-plugin-import": "^2.32.0",
+    "nodemon": "^3.1.11",
+    "prettier": "^2.8.8"
+  }
+}
