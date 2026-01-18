@@ -1,3 +1,9 @@
+/*
+
+i wanna use it, but...
+
+*/
+
 function sendJson(res, statusCode, payload) {
   res.status(statusCode).json(payload);
 }

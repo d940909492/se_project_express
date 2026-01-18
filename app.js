@@ -1,11 +1,13 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors");
 const routes = require("./routes/index");
 const logger = require("./utils/logger");
 
 const { PORT = 3001 } = process.env;
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 mongoose
   .connect("mongodb://127.0.0.1:27017/wtwr_db")
@@ -16,13 +18,6 @@ mongoose
     logger.error("Database connection error:", error);
     process.exit(1);
   });
-
-app.use((req, res, next) => {
-  req.user = {
-    _id: "69633998105a640012a7aaa8",
-  };
-  next();
-});
 
 app.use("/", routes);
 

@@ -1,12 +1,15 @@
 const Item = require("../models/clothingItem");
-const { SERVER_ERROR, NOT_FOUND, BAD_REQUEST } = require("../utils/errors");
+const {
+  SERVER_ERROR,
+  NOT_FOUND,
+  BAD_REQUEST,
+  FORBIDDEN,
+} = require("../utils/errors");
 
 module.exports.getItems = (req, res) => {
   Item.find({})
-    .populate("owner")
     .then((items) =>
       res.send({
-        message: "get all items called",
         data: items,
       })
     )
@@ -14,21 +17,27 @@ module.exports.getItems = (req, res) => {
 };
 
 module.exports.createItem = (req, res) => {
-  const { name, weather, imageUrl, owner } = req.body;
+  const { name, weather, imageUrl } = req.body;
 
   Item.create({
     name,
     weather,
     imageUrl,
-    owner,
+    owner: req.user._id,
   })
     .then((item) =>
       res.status(201).send({
-        message: "create item called",
         data: item,
       })
     )
-    .catch((err) => res.status(SERVER_ERROR).send({ message: err.message }));
+    .catch((err) => {
+      if (err.name === "ValidationError") {
+        return res.status(BAD_REQUEST).send({
+          message: err.message,
+        });
+      }
+      res.status(SERVER_ERROR).send({ message: err.message });
+    });
 };
 
 module.exports.deleteItem = (req, res) => {
@@ -37,24 +46,24 @@ module.exports.deleteItem = (req, res) => {
       if (!item) {
         return res.status(NOT_FOUND).send({ message: "item not found" });
       }
+      if (item.owner.toString() !== req.user._id) {
+        return res.status(FORBIDDEN).send({ message: "This is not your item" });
+      }
 
-      return Item.findByIdAndDelete(req.params.itemId)
-        .onFail()
-        .then(() =>
-          res.send({
-            message: "delete item called",
-            data: item,
-          })
-        );
+      return Item.findByIdAndDelete(req.params.itemId).then(() =>
+        res.send({
+          message: "delete item called",
+          data: item,
+        })
+      );
     })
     .catch((err) => {
       console.error(err);
+
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "user id is invalid" });
+        return res.status(BAD_REQUEST).send({ message: "item id is invalid" });
       }
-      if (err.name === "DocumentNotFoundError") {
-        return res.status(NOT_FOUND).send({ message: "user not found" });
-      }
+
       return res.status(SERVER_ERROR).send({ message: "server error" });
     });
 };
@@ -66,24 +75,18 @@ module.exports.updatelikeItem = (req, res) => {
     { new: true }
   )
     .populate("owner likes")
-    .onFail()
-    .then((item) => {
-      if (!item) {
-        return res.status(NOT_FOUND).send({ message: "item not found" });
-      }
-
-      return res.send({
-        message: "item liked",
+    .orFail()
+    .then((item) =>
+      res.send({
         data: item,
-      });
-    })
+      })
+    )
     .catch((err) => {
-      console.error(err);
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "user id is invalid" });
+        return res.status(BAD_REQUEST).send({ message: "item id is invalid" });
       }
       if (err.name === "DocumentNotFoundError") {
-        return res.status(NOT_FOUND).send({ message: "user not found" });
+        return res.status(NOT_FOUND).send({ message: "item not found" });
       }
       return res.status(SERVER_ERROR).send({ message: "server error" });
     });
@@ -96,24 +99,18 @@ module.exports.deletelikeItem = (req, res) => {
     { new: true }
   )
     .populate("owner likes")
-    .onFail()
-    .then((item) => {
-      if (!item) {
-        return res.status(NOT_FOUND).send({ message: "item not found" });
-      }
-
-      return res.send({
-        message: "item unliked",
+    .orFail()
+    .then((item) =>
+      res.send({
         data: item,
-      });
-    })
+      })
+    )
     .catch((err) => {
-      console.error(err);
       if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "user id is invalid" });
+        return res.status(BAD_REQUEST).send({ message: "item id is invalid" });
       }
       if (err.name === "DocumentNotFoundError") {
-        return res.status(NOT_FOUND).send({ message: "user not found" });
+        return res.status(NOT_FOUND).send({ message: "item not found" });
       }
       return res.status(SERVER_ERROR).send({ message: "server error" });
     });

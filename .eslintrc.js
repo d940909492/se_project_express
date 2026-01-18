@@ -31,5 +31,6 @@ module.exports = {
         allow: ["_id"],
       },
     ],
+    "consistent-return": "off",
   },
 };
