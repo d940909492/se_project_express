@@ -1,60 +1,23 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+
 const User = require("../models/user");
-const {
-  BAD_REQUEST,
-  SERVER_ERROR,
-  NOT_FOUND,
-  CONFLICT,
-} = require("../utils/errors");
 const { JWT_SECRET } = require("../utils/config");
 
-module.exports.getUsers = (req, res) => {
-  User.find({})
-    .then((users) => {
-      res.send({
-        message: "get all users called",
-        data: users,
-      });
-    })
-    .catch((err) => res.status(SERVER_ERROR).send({ message: err.message }));
-};
+const {
+  BadRequestError,
+  UnauthorizedError,
+  NotFoundError,
+  ConflictError,
+} = require("../utils/errors");
 
-module.exports.getCurrentUser = (req, res) => {
-  User.findById(req.user._id)
-    .orFail()
-    .then((user) => {
-      if (!user) {
-        return res.status(NOT_FOUND).send({ message: "User not found" });
-      }
+const SALT_ROUNDS = 10;
 
-      return res.send({
-        data: user,
-      });
-    })
-    .catch((err) => {
-      console.error(err);
-      if (err.name === "CastError") {
-        return res.status(BAD_REQUEST).send({ message: "user id is invalid" });
-      }
-      if (err.name === "DocumentNotFoundError") {
-        return res.status(NOT_FOUND).send({ message: "user not found" });
-      }
-      return res.status(SERVER_ERROR).send({ message: "server error" });
-    });
-};
-
-module.exports.createUser = (req, res) => {
+module.exports.createUser = (req, res, next) => {
   const { name, avatar, email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(BAD_REQUEST).send({
-      message: "Email or password is missing",
-    });
-  }
-
-  return bcrypt
-    .hash(password, 12)
+  bcrypt
+    .hash(password, SALT_ROUNDS)
     .then((hash) =>
       User.create({
         name,
@@ -64,73 +27,91 @@ module.exports.createUser = (req, res) => {
       })
     )
     .then((user) => {
-      const USER = user.toObject();
-      delete USER.password;
+      const safeUser = user.toObject();
+      delete safeUser.password;
 
-      return res.status(201).send({
-        data: USER,
-      });
+      res.status(201).send(safeUser);
     })
     .catch((err) => {
       if (err.code === 11000) {
-        return res.status(CONFLICT).send({
-          message: "This email already exist",
-        });
+        return next(new ConflictError("Email already exists"));
       }
-
       if (err.name === "ValidationError") {
-        return res.status(BAD_REQUEST).send({
-          message: err.message,
-        });
+        return next(new BadRequestError("Invalid user data"));
       }
-
-      return res.status(SERVER_ERROR).send({
-        message: "Server error",
-      });
+      return next(err);
     });
 };
 
-module.exports.login = (req, res) => {
+module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
-  return User.findUserByCredentials(email, password)
+
+  User.findUserByCredentials(email, password)
     .then((user) => {
       const token = jwt.sign({ _id: user._id }, JWT_SECRET, {
         expiresIn: "7d",
       });
-      return res.send({ token });
+
+      const isProd = process.env.NODE_ENV === "production";
+
+      res
+        .cookie("jwt", token, {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: isProd,
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        })
+        .send({
+          message: "Logged in",
+          user: {
+            _id: user._id,
+            name: user.name,
+            avatar: user.avatar,
+            email: user.email,
+          },
+        });
     })
+    .catch(() => next(new UnauthorizedError("Incorrect email or password")));
+};
+
+module.exports.getCurrentUser = (req, res, next) => {
+  User.findById(req.user._id)
+    .orFail()
+    .then((user) => res.send(user))
     .catch((err) => {
-      console.error(err);
-      return res
-        .status(BAD_REQUEST)
-        .send({ message: "Incorrect email or password" });
+      if (err.name === "DocumentNotFoundError") {
+        return next(new NotFoundError("User not found"));
+      }
+      return next(err);
     });
 };
 
-module.exports.updateCurrentUser = (req, res) => {
+module.exports.updateCurrentUser = (req, res, next) => {
   const { name, avatar } = req.body;
-  const update = {};
-  if (name !== undefined) {
-    update.name = name;
-  }
-  if (avatar !== undefined) {
-    update.avatar = avatar;
-  }
 
-  return User.findByIdAndUpdate(req.user._id, update, {
-    new: true,
-    runValidators: true,
-  })
-    .then((user) => {
-      if (!user) {
-        return res.status(NOT_FOUND).send({ message: "User not found" });
-      }
-      return res.send({ data: user });
-    })
+  User.findByIdAndUpdate(
+    req.user._id,
+    { name, avatar },
+    { new: true, runValidators: true }
+  )
+    .orFail()
+    .then((user) => res.send(user))
     .catch((err) => {
       if (err.name === "ValidationError") {
-        return res.status(BAD_REQUEST).send({ message: err.message });
+        return next(new BadRequestError("Invalid user data"));
       }
-      return res.status(SERVER_ERROR).send({ message: "Server error" });
+      if (err.name === "DocumentNotFoundError") {
+        return next(new NotFoundError("User not found"));
+      }
+      return next(err);
     });
+};
+
+module.exports.logout = (req, res) => {
+  res
+    .clearCookie("jwt", {
+      httpOnly: true,
+      sameSite: "lax",
+    })
+    .send({ message: "Logged out" });
 };
