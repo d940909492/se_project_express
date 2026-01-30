@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const helmet = require("helmet");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+require("dotenv").config();
 
 const { errors } = require("celebrate");
 const errorHandler = require("./middleware/error-handler");
