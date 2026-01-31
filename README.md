@@ -14,8 +14,20 @@ The back-end project is focused on creating a server for the WTWR application.
 
 ## Project Pitch Video
  
- Check out [this video](https://www.loom.com/share/c997035f445e4216931858c4f8f83bf2), where I describe my 
+ Check out [this video](https://www.loom.com/share/992cb48c55a44352ad73be132d459314), where I describe my 
  project and some challenges I faced while building it.
+
+<br />
+
+ ## Project domain link
+ 
+Heres Link of my domain link, check [this link](https://www.weather-clothing.jumpingcrab.com/)
+
+<br />
+
+ ## Project front-end repo
+ 
+ Check out [this repo link](https://github.com/d940909492/se_project_react)
 
 <br />
 
